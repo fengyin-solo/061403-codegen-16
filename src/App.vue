@@ -35,15 +35,25 @@
           <ResourcePanel 
             :heat="heat"
             :wood="wood"
+            :kindling="kindling"
+            :charcoal="charcoal"
+            :fat="fat"
             :food="food"
             :hide="hide"
             :tools="tools"
+            :currentFuel="currentFuel"
+            :smokeEffectActive="smokeEffectActive"
+            :toxicEffectActive="toxicEffectActive"
           />
         </div>
 
         <div class="center-panel">
           <div class="campfire-wrapper">
-            <Campfire :heat="heat" :canvasSize="280" />
+            <Campfire 
+              :heat="heat" 
+              :canvasSize="280" 
+              :currentFuel="currentFuel"
+            />
           </div>
           <div class="heat-info">
             <div class="heat-label">🔥 热量值</div>
@@ -54,6 +64,11 @@
               ></div>
             </div>
             <div class="heat-value">{{ Math.round(heat) }}/100</div>
+            <div v-if="currentFuel" class="current-fuel-info">
+              <span class="fuel-badge">
+                {{ getFuelIcon(currentFuel) }} {{ getFuelName(currentFuel) }}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -63,11 +78,22 @@
             :gameOver="gameOver"
             :canFire="canMakeFire"
             :canCraft="wood >= 2 && hide >= 1"
+            :canCharcoal="canMakeCharcoal"
+            :canFat="canMakeFat"
             :huntRate="huntSuccessRate"
             :food="food"
+            :wood="wood"
+            :kindling="kindling"
+            :charcoal="charcoal"
+            :fat="fat"
+            :selectedFuel="selectedFuelType"
+            :fuelTypes="fuelTypes"
             @chop="handleChop"
             @hunt="handleHunt"
             @craft="handleCraft"
+            @makeCharcoal="handleMakeCharcoal"
+            @renderFat="handleRenderFat"
+            @selectFuel="handleSelectFuel"
             @fire="handleFire"
             @eat="handleEat"
           />
@@ -109,6 +135,9 @@ const {
   temperature,
   heat,
   wood,
+  kindling,
+  charcoal,
+  fat,
   food,
   hide,
   tools,
@@ -121,10 +150,20 @@ const {
   actionLog,
   isDanger,
   canMakeFire,
+  canMakeCharcoal,
+  canMakeFat,
   huntSuccessRate,
+  currentFuel,
+  smokeEffectActive,
+  toxicEffectActive,
+  selectedFuelType,
+  fuelTypes,
   chopWood,
   hunt,
   makeTools,
+  makeCharcoal,
+  renderFat,
+  setFuelType,
   makeFire,
   eatFood,
   saveGame,
@@ -163,6 +202,16 @@ function getHeatGradient() {
   return 'linear-gradient(to right, #cc3300, #ff6600)'
 }
 
+function getFuelIcon(id) {
+  const icons = { wood: '🪵', kindling: '🍂', charcoal: '⬛', fat: '🕯️' }
+  return icons[id] || '🔥'
+}
+
+function getFuelName(id) {
+  const names = { wood: '普通木柴', kindling: '干燥引火物', charcoal: '木炭', fat: '兽脂' }
+  return names[id] || id
+}
+
 function handleChop() {
   playChop()
   chopWood()
@@ -185,6 +234,30 @@ function handleCraft() {
   } else {
     playWarning()
   }
+}
+
+function handleMakeCharcoal() {
+  if (canMakeCharcoal.value) {
+    playCraft()
+    makeCharcoal()
+    playSuccess()
+  } else {
+    playWarning()
+  }
+}
+
+function handleRenderFat() {
+  if (canMakeFat.value) {
+    playCraft()
+    renderFat()
+    playSuccess()
+  } else {
+    playWarning()
+  }
+}
+
+function handleSelectFuel(type) {
+  setFuelType(type)
 }
 
 function handleFire() {
@@ -337,7 +410,7 @@ watch(isDanger, (newVal) => {
 
 .middle-section {
   display: grid;
-  grid-template-columns: 280px 1fr 320px;
+  grid-template-columns: 300px 1fr 360px;
   gap: 20px;
   align-items: start;
 }
@@ -364,7 +437,7 @@ watch(isDanger, (newVal) => {
 
 .heat-info {
   width: 100%;
-  max-width: 300px;
+  max-width: 320px;
   text-align: center;
 }
 
@@ -398,6 +471,21 @@ watch(isDanger, (newVal) => {
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
 }
 
+.current-fuel-info {
+  margin-top: 10px;
+}
+
+.fuel-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, rgba(255, 150, 50, 0.35), rgba(255, 100, 0, 0.2));
+  border: 1px solid rgba(255, 150, 50, 0.6);
+  border-radius: 20px;
+  color: rgba(255, 240, 200, 0.95);
+  font-size: 12px;
+  font-weight: bold;
+}
+
 .right-panel {
   display: flex;
   flex-direction: column;
@@ -423,7 +511,7 @@ watch(isDanger, (newVal) => {
   .left-panel > *,
   .right-panel > * {
     flex: 1;
-    min-width: 280px;
+    min-width: 300px;
   }
 }
 
